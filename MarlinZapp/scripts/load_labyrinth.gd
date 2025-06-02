@@ -119,6 +119,7 @@ func create_wall_lantern(lantern_data):
 	lantern.name = "Lantern-"+str(lantern.position)
 	lantern.light_energy = 0.2
 	lantern.shadow_enabled = true
+	lantern.light_bake_mode = Light3D.BAKE_STATIC
 	if lantern_data["direction"] == "north":
 		lantern.rotation_degrees = Vector3(0,270,0)
 	elif lantern_data["direction"] == "west":

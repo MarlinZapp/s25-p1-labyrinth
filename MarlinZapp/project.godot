@@ -15,6 +15,10 @@ run/main_scene="uid://bp684kux210v8"
 config/features=PackedStringArray("4.4", "Forward Plus")
 config/icon="res://assets/icon.svg"
 
+[editor]
+
+movie_writer/movie_file="/home/marlin/Videos/Godot/labyrinth-ten_reflection_probes.avi"
+
 [editor_plugins]
 
 enabled=PackedStringArray()
@@ -53,4 +57,5 @@ jump={
 
 [rendering]
 
+global_illumination/voxel_gi/quality=1
 global_illumination/sdfgi/probe_ray_count=5
