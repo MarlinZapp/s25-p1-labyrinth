@@ -17,7 +17,7 @@ config/icon="res://assets/icon.svg"
 
 [editor]
 
-movie_writer/movie_file="/home/marlin/Videos/Godot/labyrinth-ten_reflection_probes.avi"
+movie_writer/movie_file="/home/marlin/Videos/Godot/labyrinth-sdfgi-with-sun.avi"
 
 [editor_plugins]
 
