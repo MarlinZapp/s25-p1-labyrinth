@@ -1,34 +1,43 @@
-extends CharacterBody3D
+extends NPCBase
 
-@export var speed = 5.0
+class_name NPCRogue
+
+@onready var model = $Rig
+@onready var anim_tree = $AnimationTree
+@onready var anim_state = $AnimationTree.get("parameters/playback")
+@onready var mesh_instance: MeshInstance3D
 
 var gravity = ProjectSettings.get_setting("physics/3d/default_gravity")
 
 var target_position: Vector3
-@onready var navigation_agent = $NavigationAgent3D
-@onready var model = $Rig
-@onready var anim_tree = $AnimationTree
-@onready var anim_state = $AnimationTree.get("parameters/playback")
 
+# HTTP request node for AI communication
+var http_request: HTTPRequest
+var ollama_url = "http://localhost:11434/api/generate"
+
+# NPC state and context
+var npc_name = "Guard"
+var npc_role = "A medieval castle guard"
+var current_context = ""
 
 func _ready():
-	# Wait for navigation to be ready
-	call_deferred("setup_navigation")
-
-func setup_navigation():
-	# Connect to navigation finished signal
-	navigation_agent.navigation_finished.connect(_on_navigation_finished)
-	
-	# Set agent properties
-	navigation_agent.max_speed = speed
-	navigation_agent.path_desired_distance = 0.5
-	navigation_agent.target_desired_distance = 0.5
+	super._ready()
+	# Initialize NPC context
+	character_name = "Guard"
+	character_description = """
+	You are a vigilant guard patrolling the area. You are suspicious of strangers 
+	but willing to talk if approached peacefully. You take your duties seriously 
+	and will investigate anything unusual.
+	"""
 
 func move_to_position(pos: Vector3):
 	target_position = pos
 	navigation_agent.set_target_position(pos)
 
 func _physics_process(delta):
+	var vl = velocity * model.transform.basis
+	anim_tree.set("parameters/IdleWalkRun/blend_position", Vector2(vl.x, -vl.z) / speed)
+	
 	if navigation_agent.is_navigation_finished():
 		return
 	
@@ -38,14 +47,16 @@ func _physics_process(delta):
 	# Calculate direction to next waypoint
 	var direction = (next_path_position - global_position).normalized()
 	
+	var vy = velocity.y
+	velocity.y = 0
+
 	# Apply movement
-	velocity = direction * speed
+	velocity = lerp(velocity, direction * speed, acceleration * delta)
+	
+	velocity.y = vy
+	
 	move_and_slide()
 	
 	# Optional: Make NPC face movement direction
 	if velocity.length() > 0.1:
 		look_at(global_position + direction, Vector3.UP)
-
-func _on_navigation_finished():
-	print("NPC reached destination!")
-	velocity = Vector3.ZERO

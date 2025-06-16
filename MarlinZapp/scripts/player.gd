@@ -1,6 +1,8 @@
 extends CharacterBody3D
 
-@export var speed = 5.0
+class_name PlayerCharacter
+
+@export var speed = 3.0
 @export var acceleration = 4.0
 @export var jump_speed = 6.0
 @export var rotation_speed = 12.0
@@ -48,7 +50,7 @@ func get_move_input(delta):
 	var vy = velocity.y
 	velocity.y = 0
 	var input = Input.get_vector("move_left", "move_right", "move_forward", "move_back")
-	var dir = Vector3(input.x, 0, input.y).rotated(Vector3.UP, spring_arm.rotation.y)
+	var dir = Vector3(input.x, 0, input.y).rotated(Vector3.UP, spring_arm.rotation.y).normalized()
 	velocity = lerp(velocity, dir * speed, acceleration * delta)
 	var vl = velocity * model.transform.basis
 	anim_tree.set("parameters/IdleWalkRun/blend_position", Vector2(vl.x, -vl.z) / speed)

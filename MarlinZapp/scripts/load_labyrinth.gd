@@ -127,7 +127,7 @@ func create_wall_lantern(lantern_data):
 	elif lantern_data["direction"] == "south":
 		lantern.rotation_degrees = Vector3(0,90,0)
 	
-	var lantern_scene = preload("res://assets/lamp.tscn").instantiate()
+	var lantern_scene = preload("res://lamp.tscn").instantiate()
 	lantern_scene.position = Vector3(0.165, 0.155, 0.007)
 	lantern_scene.rotation_degrees.y = 17
 	lantern_scene.scale = Vector3(0.175, 0.175, 0.175)
