@@ -15,20 +15,15 @@ var target_position: Vector3
 var http_request: HTTPRequest
 var ollama_url = "http://localhost:11434/api/generate"
 
-# NPC state and context
-var npc_name = "Guard"
-var npc_role = "A medieval castle guard"
-var current_context = ""
-
 func _ready():
 	super._ready()
 	# Initialize NPC context
-	character_name = "Guard"
-	character_description = """
-	You are a vigilant guard patrolling the area. You are suspicious of strangers 
-	but willing to talk if approached peacefully. You take your duties seriously 
-	and will investigate anything unusual.
-	"""
+	# character_name = "Guard"
+	#character_description = """
+	#You are a vigilant guard patrolling the area. You are suspicious of strangers 
+	#but willing to talk if approached peacefully. You take your duties seriously 
+	#and will investigate anything unusual.
+	#"""
 
 func move_to_position(pos: Vector3):
 	target_position = pos

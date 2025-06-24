@@ -32,7 +32,8 @@ func _physics_process(delta: float) -> void:
 	move_and_slide()
 	if velocity.length() > 1.0:
 		model.rotation.y = lerp_angle(model.rotation.y, spring_arm.rotation.y, rotation_speed * delta)
-	if is_on_floor() and Input.is_action_just_pressed("jump"):
+	
+	if is_on_floor() and Input.is_action_just_pressed("jump") and get_viewport().gui_get_focus_owner() == null:
 		velocity.y = jump_speed
 		jumping = true
 		anim_tree.set("parameters/conditions/jumping", true)
@@ -47,6 +48,9 @@ func _physics_process(delta: float) -> void:
 	last_floor = is_on_floor()
 
 func get_move_input(delta):
+	# Don't process movement if UI has focus
+	if get_viewport().gui_get_focus_owner() != null:
+		return
 	var vy = velocity.y
 	velocity.y = 0
 	var input = Input.get_vector("move_left", "move_right", "move_forward", "move_back")

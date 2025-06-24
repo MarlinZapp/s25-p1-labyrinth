@@ -1311,6 +1311,8 @@ offset_bottom = 40.0
 
 [node name="Rogue" parent="NPC" groups=["npcs"] instance=ExtResource("3_foa24")]
 transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, -3, 0, 2)
+character_name = "Guard"
+character_description = "You are a vigilant guard patrolling the area. You are suspicious of strangers but willing to talk if approached peacefully. You take your duties seriously and will investigate anything unusual."
 
 [node name="Knight" parent="." groups=["player"] instance=ExtResource("2_pfw25")]
 transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, -3, 0, 5)

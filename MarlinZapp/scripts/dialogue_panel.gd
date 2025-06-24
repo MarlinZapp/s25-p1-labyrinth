@@ -136,7 +136,7 @@ func _on_npc_behavior_updated(
 		hide_dialogue()
 
 func _on_npc_dialogue_received(text: String, npc: NPCBase) -> void:
-	show_message(npc.npc_name, text)
+	show_message(npc.character_name, text)
 
 func show_message(speaker: String, message: String):
 	"""Display a message in the dialogue UI"""
@@ -144,7 +144,7 @@ func show_message(speaker: String, message: String):
 
 func show_dialogue(npc: NPCBase):
 	"""Show the dialogue panel"""
-	speaker_label.text = npc.npc_name
+	speaker_label.text = npc.character_name
 	visible = true
 	is_dialogue_active = true
 	input_field.grab_focus()
