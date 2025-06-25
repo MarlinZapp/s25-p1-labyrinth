@@ -6,6 +6,7 @@
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_l5ahi"]
 
 [node name="Arrow" instance=ExtResource("1_l5ahi")]
+transform = Transform3D(0.000837762, 0, -1, 0, 1, 0, 1, 0, 0.000837762, 0, 0, 0)
 script = ExtResource("2_2ndhl")
 
 [node name="Sketchfab_model" parent="." index="0"]

@@ -7,7 +7,7 @@ class_name PlayerCharacter
 @export var jump_speed = 6.0
 @export var rotation_speed = 12.0
 @export var mouse_sensitivity = 0.0015
-@export var arrow_speed: float = 1000.0
+@export var arrow_speed: float = 10.0
 
 var gravity = ProjectSettings.get_setting("physics/3d/default_gravity")
 var jumping = false
@@ -22,7 +22,7 @@ var aiming = false
 
 # At the top of your script, preload the arrow scene
 const ARROW_SCENE = preload("res://arrow.tscn")
-@onready var shoot_point: Marker3D = $ShootPoint  # Position where arrow spawns
+@onready var shoot_point: Marker3D = $"Rig/Skeleton3D/2H_Crossbow/2H_Crossbow/ShootPoint"
 
 func _ready():
 	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
