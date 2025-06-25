@@ -23,9 +23,10 @@ const dialogue_response_format = {
 					"items" : {
 						"type" : "object",
 						"properties" : {
-							"name" : { "type" : "string" }
+							"name" : { "type" : "string" },
+							"value" : { "type" : "string" }
 						},
-						"required" : [ "name" ]
+						"required" : [ "name", "value" ]
 					}
 				}
 			},
@@ -46,9 +47,10 @@ const action_response_format = {
 					"items" : {
 						"type" : "object",
 						"properties" : {
-							"name" : { "type" : "string" }
+							"name" : { "type" : "string" },
+							"value" : { "type" : "string" }
 						},
-						"required" : [ "name" ]
+						"required" : [ "name", "value" ]
 					}
 				}
 			},
@@ -76,12 +78,12 @@ func get_actions_text(available_actions: Array[NPCBase.Action]) -> String:
 		actions_text += "- %s: %s %s\n" % [action.name, parameters_text, action.description]
 	return actions_text
 
-func request_behavior_decision(npc: NPCBase, situation: String, player_action: String = ""):
+func request_behavior_decision(npc: NPCBase, situation: String):
 	"""Request AI decision for NPC behavior"""
 	var npc_context = npc._get_ai_context() if npc.has_method("_get_ai_context") else ""
 	var conversation_history = npc._get_conversation_history() if npc.has_method("_get_conversation_history") else ""
 
-	var prompt = _build_behavior_prompt(situation, player_action)
+	var prompt = _build_behavior_prompt(situation)
 	print("Sending behavior prompt for %s: %s" % [npc.character_name, prompt])
 	_send_ollama_request(prompt, "behavior", npc, action_response_format)
 
@@ -91,13 +93,12 @@ func request_dialogue_response(npc: NPCBase, situation: String, player_message: 
 	print("Sending dialogue prompt for %s: %s" % [npc.character_name, prompt])
 	_send_ollama_request(prompt, "dialogue", npc, dialogue_response_format)
 
-func _build_behavior_prompt(situation: String, player_action: String) -> String:
+func _build_behavior_prompt(situation: String) -> String:
 	var prompt = """
 	%s
-	Player action: %s
 
 	Based on this situation, decide what you should do next. Respond with one of your actions and a very short reason.
-	""" % [situation, player_action]
+	""" % [situation]
 
 	return prompt
 
@@ -108,7 +109,7 @@ func _build_dialogue_prompt(situation: String, player_message: String) -> String
 
 	Respond as your character would Keep responses under 50 words and stay in character.
 	Don't break the fourth wall or mention being an AI.
-	You may also use one of your actions.
+	You should end the dialog with one of your available actions if you feel that way.
 	""" % [situation, player_message]
 
 	return prompt
@@ -212,7 +213,6 @@ func _process_behavior_response(ai_response: String, npc: NPCBase):
 	var action = response_data.action
 	var reason = response_data.reason
 
-	print("AI Decision for %s: %s - %s" % [npc.character_name, action.name, reason])
 	add_to_message_history(npc, [{
 		"role" : "assistant",
 		"content" : ai_response
@@ -233,7 +233,7 @@ func _process_dialogue_response(ai_response: String, npc: NPCBase):
 		action = response_data.action
 	print("AI Response for %s: %s" % [npc.character_name, response_data.response])
 	if action != null:
-		print("Action: " % [response_data.action.name])
+		print("Action: %s" % [response_data.action.name])
 	add_to_message_history(npc, [{
 		"role" : "assistant",
 		"content" : ai_response

@@ -1,9 +1,9 @@
-[gd_scene load_steps=127 format=3 uid="uid://bp684kux210v8"]
+[gd_scene load_steps=128 format=3 uid="uid://bp684kux210v8"]
 
 [ext_resource type="Script" uid="uid://dgfwxxviomrib" path="res://scripts/generate_labyrinth.gd" id="1_y7ki6"]
-[ext_resource type="PackedScene" uid="uid://6gudtmr8tpgn" path="res://player.tscn" id="2_pfw25"]
+[ext_resource type="PackedScene" uid="uid://6gudtmr8tpgn" path="res://knight.tscn" id="2_pfw25"]
 [ext_resource type="PackedScene" uid="uid://463ym1bk0o1n" path="res://lamp.tscn" id="2_t6uu3"]
-[ext_resource type="PackedScene" uid="uid://d37h3el2sj8tl" path="res://npc_rogue.tscn" id="3_foa24"]
+[ext_resource type="PackedScene" uid="uid://d37h3el2sj8tl" path="res://rogue.tscn" id="3_foa24"]
 [ext_resource type="VoxelGIData" uid="uid://bsgo6fcnvowsf" path="res://voxel_gi.res" id="3_y7ki6"]
 [ext_resource type="Material" uid="uid://b4ux6rdkqm0og" path="res://assets/materials/reflecting_material.tres" id="4_atngq"]
 [ext_resource type="Material" uid="uid://jm8f8dujcqya" path="res://assets/materials/absorbing_material.tres" id="4_rq121"]
@@ -478,11 +478,23 @@ volumetric_fog_sky_affect = 0.0
 
 [sub_resource type="Compositor" id="Compositor_nb6yp"]
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_e0a7f"]
+bg_color = Color(0, 0, 0, 0.5)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.7, 0.7, 0.7, 1)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
 [node name="Root" type="Node3D"]
 script = ExtResource("1_y7ki6")
 labyrinth_path = "res://labyrinth.json"
-generate_labyrinth_size_x = 7
-generate_labyrinth_size_z = 7
+generate_labyrinth_size_x = 20
+generate_labyrinth_size_z = 20
 
 [node name="NavigationRegion3D" type="NavigationRegion3D" parent="."]
 transform = Transform3D(0.1, 0, 0, 0, 0.1, 0, 0, 0, 0.1, 0, 0, 0)
@@ -1309,14 +1321,14 @@ offset_bottom = 40.0
 
 [node name="NPC" type="Node3D" parent="."]
 
-[node name="Rogue" parent="NPC" groups=["npcs"] instance=ExtResource("3_foa24")]
-transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, -3, 0, 2)
-character_name = "Guard"
-character_description = "You are a vigilant guard patrolling the area. You are suspicious of strangers but willing to talk if approached peacefully. You take your duties seriously and will investigate anything unusual."
-
-[node name="Knight" parent="." groups=["player"] instance=ExtResource("2_pfw25")]
-transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, -3, 0, 5)
+[node name="Knight" parent="NPC" groups=["npcs"] instance=ExtResource("2_pfw25")]
+transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, -3, 0, 1)
 collision_layer = 1
+character_name = "Wilhelm"
+character_description = "You are a medieval knight with armor, sword and shield. You stand in front of the entrance of a labyrinth. Many people have died trying to traverse the  labyrinth. That's why the king has sent you to guide the folk trough the labyrinth. The entry of the labyrinth is at {0,0,1}, the exit is at {20,0,19}."
+
+[node name="Rogue" parent="." groups=["player"] instance=ExtResource("3_foa24")]
+transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, -3, 0, 5)
 
 [node name="Cameras" type="Node3D" parent="."]
 
@@ -1345,8 +1357,76 @@ data = ExtResource("3_y7ki6")
 [node name="UI" type="CanvasLayer" parent="."]
 
 [node name="DialoguePanel" type="Control" parent="UI"]
+custom_minimum_size = Vector2(450, 150)
 layout_mode = 3
-anchors_preset = 0
-offset_right = 40.0
-offset_bottom = 40.0
+anchors_preset = 6
+anchor_left = 1.0
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+offset_left = -500.0
+offset_top = -100.0
+offset_bottom = 100.0
+grow_horizontal = 0
+grow_vertical = 2
 script = ExtResource("10_foa24")
+
+[node name="BackgroundPanel" type="Panel" parent="UI/DialoguePanel"]
+custom_minimum_size = Vector2(500, 200)
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -250.0
+offset_top = -100.0
+offset_right = 250.0
+offset_bottom = 100.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_e0a7f")
+
+[node name="DialogueContainer" type="VBoxContainer" parent="UI/DialoguePanel"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -225.0
+offset_top = -82.5
+offset_right = 225.0
+offset_bottom = 82.5
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="SpeakerLabel" type="Label" parent="UI/DialoguePanel/DialogueContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 0, 1)
+theme_override_font_sizes/font_size = 18
+text = "NPC Name"
+
+[node name="MessageLabel" type="RichTextLabel" parent="UI/DialoguePanel/DialogueContainer"]
+custom_minimum_size = Vector2(360, 100)
+layout_mode = 2
+theme_override_font_sizes/normal_font_size = 14
+bbcode_enabled = true
+
+[node name="InputContainer" type="HBoxContainer" parent="UI/DialoguePanel/DialogueContainer"]
+layout_mode = 2
+
+[node name="InputField" type="LineEdit" parent="UI/DialoguePanel/DialogueContainer/InputContainer"]
+custom_minimum_size = Vector2(300, 30)
+layout_mode = 2
+placeholder_text = "Type your response..."
+
+[node name="SendButton" type="Button" parent="UI/DialoguePanel/DialogueContainer/InputContainer"]
+custom_minimum_size = Vector2(60, 30)
+layout_mode = 2
+text = "Send"
+
+[node name="CloseButton" type="Button" parent="UI/DialoguePanel/DialogueContainer/InputContainer"]
+custom_minimum_size = Vector2(60, 30)
+layout_mode = 2
+text = "Close"

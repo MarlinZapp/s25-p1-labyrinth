@@ -6,10 +6,9 @@ class_name NPCRogue
 @onready var anim_tree = $AnimationTree
 @onready var anim_state = $AnimationTree.get("parameters/playback")
 @onready var mesh_instance: MeshInstance3D
+@onready var shape_cast = $ShapeCast3D
 
 var gravity = ProjectSettings.get_setting("physics/3d/default_gravity")
-
-var target_position: Vector3
 
 # HTTP request node for AI communication
 var http_request: HTTPRequest
@@ -17,17 +16,34 @@ var ollama_url = "http://localhost:11434/api/generate"
 
 func _ready():
 	super._ready()
-	# Initialize NPC context
-	# character_name = "Guard"
-	#character_description = """
-	#You are a vigilant guard patrolling the area. You are suspicious of strangers 
-	#but willing to talk if approached peacefully. You take your duties seriously 
-	#and will investigate anything unusual.
-	#"""
+	# Enable the shapecast
+	shape_cast.enabled = true
+	# Configure what to detect
+	shape_cast.collide_with_areas = false
+	shape_cast.collide_with_bodies = true
 
-func move_to_position(pos: Vector3):
-	target_position = pos
-	navigation_agent.set_target_position(pos)
+func _on_player_seen(player: PlayerCharacter):
+	current_player = player
+	if knows_players.has(current_player):
+		pass
+		# request_behavior_decision("You see the player. You do already know him.")
+	else:
+		request_behavior_decision("You see the player. You do not know him yet.")
+		knows_players.push_back(player)
+
+func _process(delta):
+	# Check if anything is detected
+	if shape_cast.is_colliding():
+		handle_detection()
+
+func handle_detection():
+	for i in range(shape_cast.get_collision_count()):
+		var collider = shape_cast.get_collider(i)
+		var collision_point = shape_cast.get_collision_point(i)
+		var collision_normal = shape_cast.get_collision_normal(i)
+		
+		if collider.is_in_group("player"):
+			_on_player_seen(collider)
 
 func _physics_process(delta):
 	var vl = velocity * model.transform.basis

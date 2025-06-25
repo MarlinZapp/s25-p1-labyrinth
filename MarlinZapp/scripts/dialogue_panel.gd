@@ -4,13 +4,13 @@ extends Control
 class_name DialoguePanel
 
 # UI Components - assign these in the inspector or create them in code
-@onready var dialogue_container: VBoxContainer
-@onready var speaker_label: Label
-@onready var message_label: RichTextLabel
-@onready var input_field: LineEdit
-@onready var send_button: Button
-@onready var close_button: Button
-@onready var background_panel: Panel
+@onready var dialogue_container = $DialogueContainer
+@onready var speaker_label = $DialogueContainer/SpeakerLabel
+@onready var message_label = $DialogueContainer/MessageLabel
+@onready var input_field = $DialogueContainer/InputContainer/InputField
+@onready var send_button = $DialogueContainer/InputContainer/SendButton
+@onready var close_button = $DialogueContainer/InputContainer/CloseButton
+@onready var background_panel = $BackgroundPanel
 
 # Dialogue state
 var player: PlayerCharacter
@@ -21,10 +21,7 @@ var is_dialogue_active = false
 signal dialogue_input_submitted(text: String)
 signal dialogue_closed()
 
-func _ready():
-	# Create UI elements if they don't exist
-	setup_ui_elements()
-	
+func _ready():	
 	# Connect signals
 	if send_button:
 		send_button.pressed.connect(_on_send_pressed)
@@ -37,72 +34,6 @@ func _ready():
 	visible = false
 	
 	connect_to_npcs()
-
-func setup_ui_elements():
-	"""Create UI elements programmatically if not assigned"""
-	if not dialogue_container:
-		dialogue_container = VBoxContainer.new()
-		add_child(dialogue_container)
-	
-	if not background_panel:
-		background_panel = Panel.new()
-		add_child(background_panel)
-		move_child(background_panel, 0)  # Move to back
-		
-		# Style the background
-		var style_box = StyleBoxFlat.new()
-		style_box.bg_color = Color(0, 0, 0, 0.8)
-		style_box.border_width_left = 2
-		style_box.border_width_right = 2
-		style_box.border_width_top = 2
-		style_box.border_width_bottom = 2
-		style_box.border_color = Color(0.7, 0.7, 0.7, 1.0)
-		style_box.corner_radius_top_left = 10
-		style_box.corner_radius_top_right = 10
-		style_box.corner_radius_bottom_left = 10
-		style_box.corner_radius_bottom_right = 10
-		background_panel.add_theme_stylebox_override("panel", style_box)
-	
-	if not speaker_label:
-		speaker_label = Label.new()
-		speaker_label.text = "NPC Name"
-		speaker_label.add_theme_font_size_override("font_size", 18)
-		speaker_label.add_theme_color_override("font_color", Color.YELLOW)
-		dialogue_container.add_child(speaker_label)
-	
-	if not message_label:
-		message_label = RichTextLabel.new()
-		message_label.custom_minimum_size = Vector2(400, 100)
-		message_label.fit_content = true
-		message_label.bbcode_enabled = true
-		message_label.add_theme_font_size_override("normal_font_size", 14)
-		dialogue_container.add_child(message_label)
-	
-	# Input section
-	var input_container = HBoxContainer.new()
-	dialogue_container.add_child(input_container)
-	
-	if not input_field:
-		input_field = LineEdit.new()
-		input_field.custom_minimum_size = Vector2(300, 30)
-		input_field.placeholder_text = "Type your response..."
-		input_container.add_child(input_field)
-	
-	if not send_button:
-		send_button = Button.new()
-		send_button.text = "Send"
-		send_button.custom_minimum_size = Vector2(60, 30)
-		input_container.add_child(send_button)
-	
-	if not close_button:
-		close_button = Button.new()
-		close_button.text = "Close"
-		close_button.custom_minimum_size = Vector2(60, 30)
-		input_container.add_child(close_button)
-	
-	# Set anchors and margins for responsive design
-	set_anchors_and_offsets_preset(Control.PRESET_CENTER)
-	custom_minimum_size = Vector2(450, 200)
 
 func find_player():
 	"""Find the player in the scene"""
@@ -133,14 +64,23 @@ func _on_npc_behavior_updated(
 		if not visible:
 			show_dialogue(npc)
 	elif visible:
-		hide_dialogue()
+		var timer = Timer.new()
+		timer.start(2)
+		timer.timeout.connect(hide_dialogue)
 
 func _on_npc_dialogue_received(text: String, npc: NPCBase) -> void:
 	show_message(npc.character_name, text)
+	input_field.grab_focus()
+	input_field.edit()
 
 func show_message(speaker: String, message: String):
 	"""Display a message in the dialogue UI"""
-	message_label.text = message
+	"""Add a message to the dialogue history display"""
+	var formatted_message = "\n[color=yellow]%s:[/color] %s\n" % [speaker, message]
+	message_label.text += formatted_message
+	
+	# Auto-scroll to bottom if needed
+	message_label.scroll_to_line(message_label.get_line_count() - 1)
 
 func show_dialogue(npc: NPCBase):
 	"""Show the dialogue panel"""
@@ -177,7 +117,7 @@ func _send_message():
 		return
 	
 	# Show player message
-	add_message("Player", message)
+	show_message("Player", message)
 	
 	# Clear input
 	input_field.text = ""
@@ -187,14 +127,6 @@ func _send_message():
 
 func _on_close_pressed():
 	hide_dialogue()
-
-func add_message(speaker: String, message: String):
-	"""Add a message to the dialogue history display"""
-	var formatted_message = "[color=yellow]%s:[/color] %s\n" % [speaker, message]
-	message_label.text += formatted_message
-	
-	# Auto-scroll to bottom if needed
-	# message_label.scroll_to_line(message_label.get_line_count() - 1)
 
 func clear_dialogue():
 	"""Clear all dialogue history"""

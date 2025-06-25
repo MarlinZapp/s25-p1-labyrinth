@@ -12,8 +12,6 @@ enum BehaviorState {
 
 signal behavior_updated(new_state: BehaviorState, reason: String)
 signal dialogue_spoken(text: String)
-signal player_entered_range(player: CharacterBody3D)
-signal player_exited_range()
 
 @export var character_name: String = "NPC"
 @export var character_description: String = "A generic NPC"
@@ -21,9 +19,11 @@ signal player_exited_range()
 @export var speed = 3.0
 @export var acceleration = 4.0
 
+var target_position: Vector3
 var current_behavior_state: BehaviorState = BehaviorState.IDLE
-var current_player: Node
+var current_player: PlayerCharacter
 var pending_ai_request: bool =  false
+var knows_players = []
 
 @onready var interaction_area: Area3D
 @onready var dialogue_panel: Control
@@ -71,6 +71,11 @@ func setup_navigation():
 func _on_navigation_finished():
 	print("NPC reached destination!")
 	velocity = Vector3.ZERO
+	request_behavior_decision("You have reached the destination at %s" % [position])
+
+func move_to_position(pos: Vector3):
+	target_position = pos
+	navigation_agent.set_target_position(pos)
 
 func connect_ai_manager():
 	AiBehaviourManager.behavior_decision_made.connect(_on_behavior_decision_received)
@@ -106,23 +111,26 @@ func setup_interaction_area():
 
 func _on_interaction_area_entered(body):
 	if body.is_in_group("player"):
-		current_player = body
-		player_entered_range.emit(body)
-		_on_player_approached()
+		_on_player_heard(body)
 
 func can_interact() -> bool:
 	"""Check if player can interact with this NPC"""
 	return current_player != null
 
-func _on_player_approached():
-	print("A player is approaching "+character_name)
-	request_behavior_decision("The player is approaching.")
+func _on_player_heard(player: PlayerCharacter):
+	print(character_name+" has heard the player!")
+	current_player = player
+	if knows_players.has(current_player):
+		print(character_name+ " hears the player but already knows him.")
+		# request_behavior_decision("You hear the player. You do already know him.")
+	else:
+		request_behavior_decision("You hear the player. You do not know him yet.")
+		knows_players.push_back(player)
 
 func _on_interaction_area_exited(body):
 	"""Player left interaction range"""
 	if body == current_player:
 		current_player = null
-		player_exited_range.emit()
 
 func start_thinking():
 	pending_ai_request = true
@@ -133,21 +141,6 @@ func end_thinking():
 	pending_ai_request = false
 	thinking_indicator.stop_thinking_animation()
 	thinking_indicator.visible = false
-
-func is_player_visible() -> bool:
-	"""Check if player is visible (basic line of sight)"""
-	if not current_player:
-		return false
-	
-	var space_state = get_world_3d().direct_space_state
-	var query = PhysicsRayQueryParameters3D.create(
-		global_position + Vector3(0, 1.5, 0),  # From NPC eye level
-		current_player.global_position + Vector3(0, 1, 0)  # To player center
-	)
-	
-	var result = space_state.intersect_ray(query)
-	return result.is_empty() or result.collider == current_player
-
 
 # Methods that NPCs must implement to work with AI system
 func _get_ai_context() -> String:
@@ -160,7 +153,7 @@ func _get_ai_context() -> String:
 
 func _get_state() -> String:
 	var state = BehaviorState.keys()[current_behavior_state]
-	return "Your current state: %s" % [state]
+	return "Your current state: %s\n" % [state]
 
 func _get_available_actions() -> Array[Action]:
 	"""Override this to provide available actions for this NPC"""
@@ -171,34 +164,36 @@ func _get_available_actions() -> Array[Action]:
 			[
 				Action.Parameter.new(
 					"target_vector",
-					"A target position as Vector3 formatted like {15.0, 0.0, 3.0}",
+					"A target position representing a Vector3 formatted as string like \"{15.0, 0.0, 3.0}\"",
 					true
 				)
 			]),
 		Action.new(
-			"INVESTIGATE",
-			"Examine something suspicious",
-			[]),
-		Action.new(
 			"TALK",
-			"Initiate conversation with someone",
-			[]),
+			"Turn to a person and start or continue a conversation.",
+			[
+				Action.Parameter.new(
+					"message",
+					"What you want to say.",
+					false
+				)
+			]),
 		Action.new(
 			"IDLE",
 			"Stay in place and observe",
 			[]),
 		Action.new(
 			"ALERT",
-			"Become suspicious or alarmed",
+			"Become suspicious or alarmed. This does not end a conversation",
 			[]),
 	]
 
 # Public methods for triggering AI decisions
-func request_behavior_decision(player_action: String = ""):
+func request_behavior_decision(situation: String = ""):
 	"""Request AI to decide what to do next"""
 	start_thinking()
-	var situation = _get_state()
-	AiBehaviourManager.request_behavior_decision(self, situation, player_action)
+	situation = _get_state() + situation
+	AiBehaviourManager.request_behavior_decision(self, situation)
 
 func request_dialogue_response(player_message: String):
 	"""Request AI dialogue response"""
@@ -228,27 +223,40 @@ func _on_dialogue_response_received(npc: NPCBase, response: String, action: Vari
 # Behavior execution - override these in specific NPCs
 func execute_behavior_action(action: Dictionary, reason: String):
 	"""Execute the behavior action - override for specific implementations"""
+	print("AI decision from " + character_name + ": " + action.name + " ("+reason+")")
+	print("Parameters: %s" % [action.parameters])
 	match action.name:
-		"PATROL":
+		"MOVE":
 			change_state(BehaviorState.MOVING, reason)
 			var target : Vector3
 			for param in action.parameters:
 				if param.name == "target_vector":
-					var value = param.value
-					target = Vector3(value.x, value.y, value.z)
+					target = str_to_vec3(param.value)
 			start_moving_behavior(target)
-		"INVESTIGATE":
-			change_state(BehaviorState.INVESTIGATING, reason)
-			start_investigate_behavior()
 		"TALK":
 			change_state(BehaviorState.TALKING, reason)
-			start_talk_behavior()
+			var message = null
+			for param in action.parameters:
+				if param.name == "message" and param.has("value"):
+					message = param.value
+			start_talk_behavior(message)
 		"IDLE":
 			change_state(BehaviorState.IDLE, reason)
 			start_idle_behavior()
 		"ALERT":
 			change_state(BehaviorState.ALERTED, reason)
 			start_alert_behavior()
+
+func str_to_vec3(value: String):
+	value = value.strip_edges().trim_prefix("{").trim_suffix("}")
+	var numbers = value.split(",")
+	if len(numbers) != 3:
+		assert("Cannot parse "+value+" to Vector3")
+	var vec = Vector3(
+		float(numbers[0]),
+		float(numbers[1]),
+		float(numbers[2]))
+	return vec
 
 func change_state(new_state: BehaviorState, reason: String):
 	"""Change behavior state"""
@@ -258,16 +266,18 @@ func change_state(new_state: BehaviorState, reason: String):
 # Virtual methods - override in specific NPC classes
 func start_moving_behavior(target: Vector3):
 	"""Override this for other movement behavior"""
-	pass
+	move_to_position(target)
 
 func start_investigate_behavior():
 	"""Override this for investigation behavior"""
 	pass
 
-func start_talk_behavior():
+func start_talk_behavior(message: Variant):
 	"""Override this for talk behavior"""
 	if current_player:
 		look_at_player()
+	if message != null:
+		dialogue_spoken.emit(message)
 
 func start_idle_behavior():
 	"""Override this for idle behavior"""
