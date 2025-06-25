@@ -7,20 +7,22 @@ class_name PlayerCharacter
 @export var jump_speed = 6.0
 @export var rotation_speed = 12.0
 @export var mouse_sensitivity = 0.0015
+@export var arrow_speed: float = 1000.0
 
 var gravity = ProjectSettings.get_setting("physics/3d/default_gravity")
 var jumping = false
 var last_floor = true
-var attacks = [
-	"1H_Melee_Attack_Chop",
-	"1H_Melee_Attack_Slice_Diagonal",
-	"1H_Melee_Attack_Slice_Horizontal",
-]
+var reloaded = false
+var aiming = false
 
 @onready var spring_arm = $SpringArm3D
 @onready var model = $Rig
 @onready var anim_tree = $AnimationTree
 @onready var anim_state = $AnimationTree.get("parameters/playback")
+
+# At the top of your script, preload the arrow scene
+const ARROW_SCENE = preload("res://arrow.tscn")
+@onready var shoot_point: Marker3D = $ShootPoint  # Position where arrow spawns
 
 func _ready():
 	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
@@ -66,4 +68,53 @@ func _unhandled_input(event: InputEvent) -> void:
 		spring_arm.rotation_degrees.x = clamp(spring_arm.rotation_degrees.x, -90.0, 30.0)
 		spring_arm.rotation.y -= event.relative.x * mouse_sensitivity
 	if event.is_action_pressed("attack"):
-		anim_state.travel(attacks.pick_random())
+		try_shoot()
+	if event.is_action_pressed("secondary_attack"):
+		toggle_aim()
+	if event.is_action_pressed("reload"):
+		reload()
+
+func try_shoot():
+	if reloaded:
+		anim_state.travel("2H_Ranged_Shoot")
+		shoot_arrow()
+		reloaded = false
+	else:
+		pass
+
+func toggle_aim():
+	if aiming:
+		anim_state.travel("IdleWalkRun")
+		aiming = false
+	else:
+		anim_state.travel("2H_Ranged_Aiming")
+		aiming = true
+
+func reload():
+	if reloaded:
+		pass
+	else:
+		anim_state.travel("2H_Ranged_Reload")
+		reloaded = true
+
+func shoot_arrow():
+	# Instantiate the arrow
+	var arrow = ARROW_SCENE.instantiate()
+	
+	# Add arrow to the scene tree (use get_tree().current_scene or a specific parent)
+	get_tree().current_scene.add_child(arrow)
+	
+	# Position the arrow at the shoot point (or crossbow tip)
+	if shoot_point:
+		arrow.global_position = shoot_point.global_position
+		arrow.global_rotation = shoot_point.global_rotation
+	else:
+		# Fallback to crossbow position if no shoot point defined
+		arrow.global_position = global_position
+		arrow.global_rotation = global_rotation
+	
+	# Give the arrow forward velocity
+	if arrow is RigidBody3D:
+		# If arrow is a RigidBody3D, apply impulse
+		arrow.linear_velocity = -arrow.global_transform.basis.z * arrow_speed
+	

@@ -14,6 +14,12 @@ var gravity = ProjectSettings.get_setting("physics/3d/default_gravity")
 var http_request: HTTPRequest
 var ollama_url = "http://localhost:11434/api/generate"
 
+var attacks = [
+	"1H_Melee_Attack_Chop",
+	"1H_Melee_Attack_Slice_Diagonal",
+	"1H_Melee_Attack_Slice_Horizontal",
+]
+
 func _ready():
 	super._ready()
 	# Enable the shapecast
@@ -71,3 +77,6 @@ func _physics_process(delta):
 	# Optional: Make NPC face movement direction
 	if velocity.length() > 0.1:
 		look_at(global_position + direction, Vector3.UP)
+
+func attack():
+	anim_state.travel(attacks.pick_random())

@@ -232,8 +232,6 @@ func _process_dialogue_response(ai_response: String, npc: NPCBase):
 	if response_data.has("action"):
 		action = response_data.action
 	print("AI Response for %s: %s" % [npc.character_name, response_data.response])
-	if action != null:
-		print("Action: %s" % [response_data.action.name])
 	add_to_message_history(npc, [{
 		"role" : "assistant",
 		"content" : ai_response

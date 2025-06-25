@@ -21,7 +21,7 @@ var is_dialogue_active = false
 signal dialogue_input_submitted(text: String)
 signal dialogue_closed()
 
-func _ready():	
+func _ready():
 	# Connect signals
 	if send_button:
 		send_button.pressed.connect(_on_send_pressed)
