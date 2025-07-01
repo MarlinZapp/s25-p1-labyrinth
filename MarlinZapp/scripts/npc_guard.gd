@@ -28,6 +28,9 @@ func _ready():
 	shape_cast.collide_with_areas = false
 	shape_cast.collide_with_bodies = true
 
+func _on_hit_by_arrow():
+	request_behavior_decision("You have been hit by the players crossbow bolt.")
+
 func _on_player_seen(player: PlayerCharacter):
 	current_player = player
 	if knows_players.has(current_player):

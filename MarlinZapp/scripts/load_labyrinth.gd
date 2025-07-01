@@ -55,6 +55,8 @@ func load_labyrinth():
 func create_wall_segment(wall_data):
 	var material_type = wall_data["material"]
 	var wall = StaticBody3D.new()
+	wall.set_collision_layer_value(2, true)
+	wall.set_collision_mask_value(2, true)
 	wall.position = get_position_from_json(wall_data)
 	wall.name = "Wall-"+str(wall.position)
 	
