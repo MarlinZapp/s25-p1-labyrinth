@@ -3,8 +3,8 @@ extends NPCBase
 class_name NPCRogue
 
 @onready var model = $Rig
-@onready var anim_tree = $AnimationTree
-@onready var anim_state = $AnimationTree.get("parameters/playback")
+@onready var anim_tree : AnimationTree = $AnimationTree
+@onready var anim_state : AnimationNodeStateMachinePlayback = $AnimationTree.get("parameters/playback")
 @onready var mesh_instance: MeshInstance3D
 @onready var shape_cast = $ShapeCast3D
 
@@ -27,6 +27,7 @@ func _ready():
 	# Configure what to detect
 	shape_cast.collide_with_areas = false
 	shape_cast.collide_with_bodies = true
+	anim_tree.animation_finished.connect(_on_animation_finished)
 
 func _on_hit_by_arrow():
 	var message = "You have been hit by a crossbow bolt."
@@ -41,11 +42,34 @@ func _process(delta):
 
 func start_attack_behavior():
 	if knows_players.size() > 0:
-		var target_pos = knows_players[0].position
-		target_pos.y = 0
-		print("Moving to %s" % [target_pos])
-		navigation_agent.target_position = target_pos
+		var target_pos = knows_players[0].global_position
+		# Calculate direction from self to target
+		var direction = (target_pos - global_position).normalized()
+		# Move the target position 1 unit back along the direction
+		var offset_target = target_pos - direction * 1.0
+		offset_target.y = 0.0
+		print("Moving to %s" % [offset_target])
+		navigation_agent.set_target_position(offset_target)
+
+func _on_navigation_finished():
+	if self.current_behavior_state == BehaviorState.FIGHTING:
+		look_at_player()
 		attack()
+	else:
+		super._on_navigation_finished()
+
+func _on_animation_finished(anim_name: StringName):
+	# Check if the finished animation was one of our attack animations
+	if current_behavior_state == BehaviorState.FIGHTING and anim_name in attacks:
+		print("Attack animation finished: %s" % anim_name)
+		
+		# Check if player is still in range and we should continue fighting
+		if knows_players.size() > 0:
+			# Small delay before starting next attack cycle (optional)
+			await get_tree().create_timer(0.5).timeout
+			start_attack_behavior()  # Restart the attack cycle
+		else:
+			print("No players in range, stopping attack behavior")
 
 func handle_detection():
 	for i in range(shape_cast.get_collision_count()):
