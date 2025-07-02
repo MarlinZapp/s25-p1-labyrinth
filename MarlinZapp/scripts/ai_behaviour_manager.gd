@@ -153,7 +153,7 @@ func _send_ollama_request(prompt: String, request_type: String, npc: NPCBase, fo
 
 	var headers = ["Content-Type: application/json"]
 	var body = {
-		"model": "devstral",
+		"model": "mistral",
 		"messages": get_message_history(npc),
 		"stream": false,
 		"format": format

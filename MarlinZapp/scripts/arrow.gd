@@ -10,6 +10,7 @@ func _ready():
 func _on_arrow_body_entered(body: Node):
 	if body.is_in_group("npcs"):
 		body._on_hit_by_arrow()
+		_stick_to_body(body)
 
 func _stick_to_body(body: Node):
 	# Stop the arrow's physics

@@ -29,21 +29,23 @@ func _ready():
 	shape_cast.collide_with_bodies = true
 
 func _on_hit_by_arrow():
-	request_behavior_decision("You have been hit by the players crossbow bolt.")
-
-func _on_player_seen(player: PlayerCharacter):
-	current_player = player
-	if knows_players.has(current_player):
-		pass
-		# request_behavior_decision("You see the player. You do already know him.")
-	else:
-		request_behavior_decision("You see the player. You do not know him yet.")
-		knows_players.push_back(player)
+	var message = "You have been hit by a crossbow bolt."
+	if knows_players.size() > 0:
+		message = "You have been hit by the players crossbow bolt."
+	request_behavior_decision(message)
 
 func _process(delta):
 	# Check if anything is detected
 	if shape_cast.is_colliding():
 		handle_detection()
+
+func start_attack_behavior():
+	if knows_players.size() > 0:
+		var target_pos = knows_players[0].position
+		target_pos.y = 0
+		print("Moving to %s" % [target_pos])
+		navigation_agent.target_position = target_pos
+		attack()
 
 func handle_detection():
 	for i in range(shape_cast.get_collision_count()):
@@ -55,6 +57,7 @@ func handle_detection():
 			_on_player_seen(collider)
 
 func _physics_process(delta):
+	super._physics_process(delta)
 	var vl = velocity * model.transform.basis
 	anim_tree.set("parameters/IdleWalkRun/blend_position", Vector2(vl.x, -vl.z) / speed)
 	

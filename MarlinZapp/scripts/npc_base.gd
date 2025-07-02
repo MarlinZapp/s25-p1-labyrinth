@@ -5,9 +5,9 @@ extends CharacterBody3D
 enum BehaviorState {
 	IDLE,
 	MOVING,
-	INVESTIGATING,
 	TALKING,
-	ALERTED
+	ALERTED,
+	FIGHTING
 }
 
 signal behavior_updated(new_state: BehaviorState, reason: String)
@@ -18,16 +18,20 @@ signal dialogue_spoken(text: String)
 
 @export var speed = 3.0
 @export var acceleration = 4.0
+@export var turn_speed: float = 2.0  # How fast the NPC turns (radians per second)
 
+var target_rotation: float
+var original_rotation: float
+var is_turning: bool = false
 var target_position: Vector3
 var current_behavior_state: BehaviorState = BehaviorState.IDLE
 var current_player: PlayerCharacter
 var pending_ai_request: bool =  false
-var knows_players = []
+var knows_players : Array[PlayerCharacter] = []
 
 @onready var interaction_area: Area3D
 @onready var dialogue_panel: Control
-@onready var navigation_agent = $NavigationAgent3D
+@onready var navigation_agent : NavigationAgent3D = $NavigationAgent3D
 @onready var thinking_indicator : ThinkingIndicator = $ThinkingIndicator
 
 class Action:
@@ -58,6 +62,29 @@ func _ready():
 	setup_interaction_area()
 	
 	setup_navigation()
+
+
+func _physics_process(delta):
+	# Handle the turning animation
+	if is_turning:
+		var rotation_diff = target_rotation - rotation.y
+		
+		# Handle wraparound (choosing the shortest rotation path)
+		if rotation_diff > PI:
+			rotation_diff -= 2 * PI
+		elif rotation_diff < -PI:
+			rotation_diff += 2 * PI
+		
+		# Check if we're close enough to the target
+		if abs(rotation_diff) < 0.1:
+			rotation.y = target_rotation
+			is_turning = false
+		else:
+			# Smoothly rotate towards target
+			var rotation_step = sign(rotation_diff) * turn_speed * delta
+			if abs(rotation_step) > abs(rotation_diff):
+				rotation_step = rotation_diff
+			rotation.y += rotation_step
 
 func setup_navigation():
 	# Connect to navigation finished signal
@@ -116,6 +143,15 @@ func _on_interaction_area_entered(body):
 func can_interact() -> bool:
 	"""Check if player can interact with this NPC"""
 	return current_player != null
+
+func _on_player_seen(player: PlayerCharacter):
+	current_player = player
+	if knows_players.has(current_player):
+		pass
+		# request_behavior_decision("You see the player. You do already know him.")
+	else:
+		request_behavior_decision("You see the player. You do not know him yet.")
+		knows_players.push_back(player)
 
 func _on_player_heard(player: PlayerCharacter):
 	print(character_name+" has heard the player!")
@@ -184,8 +220,19 @@ func _get_available_actions() -> Array[Action]:
 			[]),
 		Action.new(
 			"ALERT",
-			"Become suspicious or alarmed. This does not end a conversation",
-			[]),
+			"Become suspicious or alarmed. A conversation starts or continues.",
+			[
+				Action.Parameter.new(
+					"message",
+					"What you want to say.",
+					false
+				)
+			]),
+		Action.new(
+			"ATTACK",
+			"Attack the player. This would end any conversation.",
+			[]
+		)
 	]
 
 # Public methods for triggering AI decisions
@@ -224,7 +271,8 @@ func _on_dialogue_response_received(npc: NPCBase, response: String, action: Vari
 func execute_behavior_action(action: Dictionary, reason: String):
 	"""Execute the behavior action - override for specific implementations"""
 	print("AI decision from " + character_name + ": " + action.name + " ("+reason+")")
-	print("Parameters: %s" % [action.parameters])
+	if action.has("parameters"):
+		print("Parameters: %s" % [action.parameters])
 	match action.name:
 		"MOVE":
 			change_state(BehaviorState.MOVING, reason)
@@ -245,7 +293,14 @@ func execute_behavior_action(action: Dictionary, reason: String):
 			start_idle_behavior()
 		"ALERT":
 			change_state(BehaviorState.ALERTED, reason)
-			start_alert_behavior()
+			var message = null
+			for param in action.parameters:
+				if param.name == "message" and param.has("value"):
+					message = param.value
+			start_alert_behavior(message)
+		"ATTACK":
+			change_state(BehaviorState.FIGHTING, reason)
+			start_attack_behavior()
 
 func str_to_vec3(value: String):
 	value = value.strip_edges().trim_prefix("{").trim_suffix("}")
@@ -268,24 +323,41 @@ func start_moving_behavior(target: Vector3):
 	"""Override this for other movement behavior"""
 	move_to_position(target)
 
-func start_investigate_behavior():
-	"""Override this for investigation behavior"""
-	pass
-
 func start_talk_behavior(message: Variant):
 	"""Override this for talk behavior"""
 	if current_player:
 		look_at_player()
+	else:
+		turn_around()
 	if message != null:
 		dialogue_spoken.emit(message)
+
+func start_attack_behavior():
+	"""Override this for attack behavior"""
+	pass
 
 func start_idle_behavior():
 	"""Override this for idle behavior"""
 	pass
 
-func start_alert_behavior():
+func start_alert_behavior(message: Variant):
 	"""Override this for alert behavior"""
-	pass
+	if current_player:
+		look_at_player()
+	else:
+		turn_around()
+	if message != null:
+		dialogue_spoken.emit(message)
+
+
+func turn_around():
+	"""Makes the NPC turn around 180 degrees when called"""
+	if is_turning:
+		return  # Already turning, ignore new turn requests
+	
+	is_turning = true
+	original_rotation = rotation.y
+	target_rotation = original_rotation + PI  # Turn 180 degrees
 
 func look_at_player():
 	"""Make NPC face the player"""
