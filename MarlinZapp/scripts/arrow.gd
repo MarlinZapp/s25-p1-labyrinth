@@ -15,6 +15,9 @@ func _on_arrow_body_entered(body: Node):
 func _stick_to_body(body: Node):
 	# Stop the arrow's physics
 	freeze = true
+	contact_monitor = false
+	set_collision_layer_value(2, false)
+	set_collision_mask_value(2, false)
 	
 	var transform = global_transform
 	

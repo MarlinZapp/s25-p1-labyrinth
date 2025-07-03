@@ -8,11 +8,21 @@ class_name NPCRogue
 @onready var mesh_instance: MeshInstance3D
 @onready var shape_cast = $ShapeCast3D
 
+@export var attack_range: float = 1.0
+@export var attack_wait_time: float = 1.5
+@export var post_attack_wait_time: float = 1.0
+
 var gravity = ProjectSettings.get_setting("physics/3d/default_gravity")
 
-# HTTP request node for AI communication
-var http_request: HTTPRequest
-var ollama_url = "http://localhost:11434/api/generate"
+var current_fight_state: FightState = FightState.NONE
+var attack_timer: float = 0.0
+
+enum FightState {
+	NONE,
+	CHASING,
+	ATTACKING,
+	WAITING
+}
 
 var attacks = [
 	"1H_Melee_Attack_Chop",
@@ -27,7 +37,7 @@ func _ready():
 	# Configure what to detect
 	shape_cast.collide_with_areas = false
 	shape_cast.collide_with_bodies = true
-	anim_tree.animation_finished.connect(_on_animation_finished)
+	navigation_agent.target_desired_distance = attack_range
 
 func _on_hit_by_arrow():
 	var message = "You have been hit by a crossbow bolt."
@@ -41,35 +51,13 @@ func _process(delta):
 		handle_detection()
 
 func start_attack_behavior():
-	if knows_players.size() > 0:
-		var target_pos = knows_players[0].global_position
-		# Calculate direction from self to target
-		var direction = (target_pos - global_position).normalized()
-		# Move the target position 1 unit back along the direction
-		var offset_target = target_pos - direction * 1.0
-		offset_target.y = 0.0
-		print("Moving to %s" % [offset_target])
-		navigation_agent.set_target_position(offset_target)
+	current_fight_state = FightState.CHASING
 
 func _on_navigation_finished():
 	if self.current_behavior_state == BehaviorState.FIGHTING:
-		look_at_player()
-		attack()
+		pass
 	else:
 		super._on_navigation_finished()
-
-func _on_animation_finished(anim_name: StringName):
-	# Check if the finished animation was one of our attack animations
-	if current_behavior_state == BehaviorState.FIGHTING and anim_name in attacks:
-		print("Attack animation finished: %s" % anim_name)
-		
-		# Check if player is still in range and we should continue fighting
-		if knows_players.size() > 0:
-			# Small delay before starting next attack cycle (optional)
-			await get_tree().create_timer(0.5).timeout
-			start_attack_behavior()  # Restart the attack cycle
-		else:
-			print("No players in range, stopping attack behavior")
 
 func handle_detection():
 	for i in range(shape_cast.get_collision_count()):
@@ -82,31 +70,77 @@ func handle_detection():
 
 func _physics_process(delta):
 	super._physics_process(delta)
+	match current_fight_state:
+		FightState.NONE:
+			pass
+		FightState.CHASING:
+			handle_chasing(delta)
+		FightState.ATTACKING:
+			handle_attacking(delta)
+		FightState.WAITING:
+			handle_waiting(delta)
+	
+	if navigation_agent.is_navigation_finished():
+		velocity = Vector3.ZERO
+	else:
+		# Get the next position in the path
+		var next_path_position = navigation_agent.get_next_path_position()
+	
+		# Calculate direction to next waypoint
+		var direction = (next_path_position - global_position).normalized()
+	
+		var vy = velocity.y
+		velocity.y = 0
+
+		# Apply movement
+		velocity = lerp(velocity, direction * speed, acceleration * delta)
+	
+		velocity.y = vy
+		
+		if velocity.length() > 0.1:
+			look_at(global_position + direction, Vector3.UP)
+	
+	move_and_slide()
 	var vl = velocity * model.transform.basis
 	anim_tree.set("parameters/IdleWalkRun/blend_position", Vector2(vl.x, -vl.z) / speed)
 	
-	if navigation_agent.is_navigation_finished():
+
+func handle_chasing(delta):
+	if not current_player:
 		return
 	
-	# Get the next position in the path
-	var next_path_position = navigation_agent.get_next_path_position()
+	set_target_position(current_player.global_position)
 	
-	# Calculate direction to next waypoint
-	var direction = (next_path_position - global_position).normalized()
-	
-	var vy = velocity.y
-	velocity.y = 0
+	# Check if we're close enough to attack
+	var distance_to_player = global_position.distance_to(current_player.global_position)
+	if distance_to_player <= attack_range:
+		start_attack()
+		return
 
-	# Apply movement
-	velocity = lerp(velocity, direction * speed, acceleration * delta)
+func handle_attacking(delta):	
+	look_at_player()
 	
-	velocity.y = vy
+	# Wait for attack animation to finish
+	attack_timer -= delta
+	if attack_timer <= 0.0:
+		current_fight_state = FightState.WAITING
+		attack_timer = post_attack_wait_time
 	
-	move_and_slide()
-	
-	# Optional: Make NPC face movement direction
-	if velocity.length() > 0.1:
-		look_at(global_position + direction, Vector3.UP)
+	velocity = Vector3.ZERO
 
-func attack():
+func handle_waiting(delta):
+	
+	attack_timer -= delta
+	if attack_timer <= 0.0:
+		current_fight_state = FightState.CHASING
+	
+	velocity = Vector3.ZERO
+
+func start_attack():
+	current_fight_state = FightState.ATTACKING
+	attack_timer = attack_wait_time
+	
 	anim_state.travel(attacks.pick_random())
+
+func set_target_position(pos: Vector3):
+	navigation_agent.target_position = pos
