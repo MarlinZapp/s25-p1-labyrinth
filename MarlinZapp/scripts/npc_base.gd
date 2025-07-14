@@ -98,7 +98,7 @@ func setup_navigation():
 func _on_navigation_finished():
 	print("NPC reached destination!")
 	velocity = Vector3.ZERO
-	request_behavior_decision("You have reached the destination at %s" % [position])
+	request_behavior_decision("You have reached the destination!")
 
 func move_to_position(pos: Vector3):
 	target_position = pos

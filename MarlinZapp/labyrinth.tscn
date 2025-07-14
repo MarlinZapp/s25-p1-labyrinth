@@ -1430,7 +1430,7 @@ offset_bottom = 40.0
 transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, -3, 0, 1)
 collision_layer = 1
 character_name = "Wilhelm"
-character_description = "You are a medieval knight with armor, sword and shield. You stand in front of the entrance of a labyrinth. Many people have died trying to traverse the  labyrinth. That's why the king has sent you to guide the folk trough the labyrinth. The entry of the labyrinth is at {0,0,1}, the exit is at {20,0,19}."
+character_description = "You are a medieval knight with armor, sword and shield. You stand in front of the entrance of a labyrinth. Many people have died trying to traverse the  labyrinth. That's why the king has sent you to guide the folk trough the labyrinth. The entry of the labyrinth is at {0,0,1}, a good stop in the middle can be made at {14,0,5} and the exit is at {20,0,19}. If you want to guide people, just move to these points."
 speed = 1.5
 
 [node name="Rogue" parent="." groups=["player"] instance=ExtResource("3_foa24")]

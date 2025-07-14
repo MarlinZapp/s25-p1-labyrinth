@@ -109,7 +109,7 @@ func _build_dialogue_prompt(situation: String, player_message: String) -> String
 
 	Respond as your character would Keep responses under 50 words and stay in character.
 	Don't break the fourth wall or mention being an AI.
-	You should end the dialog with one of your available actions if you feel that way.
+	Additionally you should use one of your available actions if it makes sense.
 	""" % [situation, player_message]
 
 	return prompt
